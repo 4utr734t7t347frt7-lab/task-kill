@@ -38,9 +38,13 @@ while [[ "$1" != "" ]]; do
         -n|--dry-run)
             DRYRUN=true
             ;;
+        -h|--help)
+            echo "Usage: $0 [-f|--force] [-n|--dry-run]"
+            exit 0
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: task-kill [-f|--force] [-n|--dry-run]"
+            echo "Usage: $0 [-f|--force] [-n|--dry-run]"
             exit 1
             ;;
     esac
@@ -71,10 +75,10 @@ pgrep -fl "$task" || { echo "No processes found."; exit 0; }
 # -------------------------
 if command -v fzf >/dev/null 2>&1; then
     echo ""
-    echo "Fuzzy select a PID (optional):"
-    pid=$(pgrep -f "$task" | fzf)
+    echo "Fuzzy select a PID or type 'all' to kill all matches:"
+    pid=$( (pgrep -f "$task"; echo "all") | fzf || true )
 else
-    read -p "Enter PID to kill (or press Enter for all): " pid
+    read -p "Enter PID to kill or type 'all': " pid
 fi
 
 # -------------------------
@@ -83,10 +87,10 @@ fi
 if $DRYRUN; then
     echo ""
     echo "[DRY RUN]"
-    if [ -n "$pid" ]; then
-        echo "Would kill PID: $pid"
+    if [ "$pid" = "all" ] || [ -z "$pid" ]; then
+        echo "Would kill ALL processes matching: $task"
     else
-        echo "Would kill all processes matching: $task"
+        echo "Would kill PID: $pid"
     fi
     exit 0
 fi
@@ -96,10 +100,9 @@ fi
 # -------------------------
 echo ""
 
-if [ -n "$pid" ]; then
-    echo "Killing PID: $pid"
-    kill "$pid" 2>/dev/null || kill -9 "$pid"
-else
+if [ "$pid" = "all" ] || [ -z "$pid" ]; then
+    echo "Killing ALL processes matching: $task"
+
     if $FORCE; then
         pkill -9 -f "$task"
         echo "Force-killed all matches."
@@ -109,6 +112,9 @@ else
         pkill -9 -f "$task" 2>/dev/null || true
         echo "Gracefully terminated (then forced if needed)."
     fi
+else
+    echo "Killing PID: $pid"
+    kill "$pid" 2>/dev/null || kill -9 "$pid"
 fi
 
 echo "Done."
