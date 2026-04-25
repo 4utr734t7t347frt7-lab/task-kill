@@ -1,0 +1,3 @@
+wait ur actualy reading me...
+shi man ig first project ever made on arch(i use arch btw) in terminal B
+shi man add me on discord if u wanna play league of legends (EUNE + EUW + NA) 2be_exe on discord
