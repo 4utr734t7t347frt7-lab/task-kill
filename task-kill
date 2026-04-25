@@ -1,0 +1,119 @@
+#!/bin/bash
+
+set -e
+
+FORCE=false
+DRYRUN=false
+
+# -------------------------
+# Fun exit messages
+# -------------------------
+quotes=(
+    "💀 That process has left the server... like Skyrim guards' free time."
+    "🎬 Game over. Insert coin to respawn."
+    "⚔️ The target has been eliminated. Mission accomplished, Solid Snake."
+    "🧙‍♂️ You shall not pass... anymore (Gandalf approved termination)."
+    "🚀 Houston, we have no process."
+    "🧠 System says: 'I’ll be back.' — not this time, Terminator."
+    "🎮 Respawn denied. Git gud, process."
+    "🕶️ Process terminated. Welcome to the Matrix."
+    "🔥 It’s over 9000... processes remaining: less."
+    "☠️ Another one bites the dust... Queen would approve."
+)
+
+# Pick random quote
+random_quote() {
+    echo ""
+    echo "${quotes[$RANDOM % ${#quotes[@]}]}"
+}
+
+# -------------------------
+# Flags
+# -------------------------
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -f|--force)
+            FORCE=true
+            ;;
+        -n|--dry-run)
+            DRYRUN=true
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: task-kill [-f|--force] [-n|--dry-run]"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+echo "=========================="
+echo "       TASK-KILL v2"
+echo "=========================="
+echo ""
+
+# -------------------------
+# Input
+# -------------------------
+read -p "Enter process name: " task
+
+if [ -z "$task" ]; then
+    echo "No process entered."
+    exit 1
+fi
+
+echo ""
+echo "Matching processes:"
+pgrep -fl "$task" || { echo "No processes found."; exit 0; }
+
+# -------------------------
+# PID selection (optional fzf)
+# -------------------------
+if command -v fzf >/dev/null 2>&1; then
+    echo ""
+    echo "Fuzzy select a PID (optional):"
+    pid=$(pgrep -f "$task" | fzf)
+else
+    read -p "Enter PID to kill (or press Enter for all): " pid
+fi
+
+# -------------------------
+# Dry run
+# -------------------------
+if $DRYRUN; then
+    echo ""
+    echo "[DRY RUN]"
+    if [ -n "$pid" ]; then
+        echo "Would kill PID: $pid"
+    else
+        echo "Would kill all processes matching: $task"
+    fi
+    exit 0
+fi
+
+# -------------------------
+# Kill logic
+# -------------------------
+echo ""
+
+if [ -n "$pid" ]; then
+    echo "Killing PID: $pid"
+    kill "$pid" 2>/dev/null || kill -9 "$pid"
+else
+    if $FORCE; then
+        pkill -9 -f "$task"
+        echo "Force-killed all matches."
+    else
+        pkill -15 -f "$task"
+        sleep 1
+        pkill -9 -f "$task" 2>/dev/null || true
+        echo "Gracefully terminated (then forced if needed)."
+    fi
+fi
+
+echo "Done."
+
+# -------------------------
+# Fun ending quote
+# -------------------------
+random_quote
